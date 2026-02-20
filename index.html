@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upset Picks — NCAAB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --court: #0a0a0f;
+      --court-mid: #111118;
+      --court-light: #1a1a26;
+      --line: #ffffff12;
+      --accent: #f0c040;
+      --accent-dim: #f0c04022;
+      --accent-hot: #ff5c2b;
+      --text-primary: #f0ede8;
+      --text-secondary: #8a8799;
+      --text-dim: #4a4860;
+      --green: #3ddc84;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background: var(--court);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-weight: 300;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, var(--line) 39px, var(--line) 40px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--court-mid);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .logo-area { display: flex; align-items: center; gap: 0.75rem; }
+    .logo-icon { font-size: 1.75rem; line-height: 1; }
+    .logo-text { font-family: var(--font-display); font-size: 1.75rem; letter-spacing: 0.05em; line-height: 1; }
+    .logo-accent { color: var(--accent); }
+    .logo-sub { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-secondary); margin-top: 2px; }
+
+    .header-right { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+
+    .date-area { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .date-label { font-size: 0.85rem; }
+    .time-label { font-size: 0.7rem; color: var(--text-dim); }
+
+    .count-badge {
+      display: flex; flex-direction: column; align-items: center;
+      background: var(--accent-dim); border: 1px solid var(--accent);
+      border-radius: 8px; padding: 0.35rem 0.85rem; min-width: 56px;
+    }
+    .count-num { font-family: var(--font-display); font-size: 1.5rem; color: var(--accent); line-height: 1; }
+    .count-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); opacity: 0.7; }
+
+    .refresh-btn {
+      display: flex; align-items: center; gap: 0.4rem;
+      background: var(--court-light); border: 1px solid var(--line);
+      color: var(--text-primary); border-radius: 8px;
+      padding: 0.55rem 1.1rem; font-family: var(--font-body);
+      font-size: 0.85rem; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .refresh-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refresh-icon { font-size: 1rem; display: inline-block; }
+    .refresh-btn.loading .refresh-icon { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* MAIN */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .section-label {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 1.75rem; flex-wrap: wrap;
+    }
+    .pill {
+      background: var(--accent-dim); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 100px;
+      padding: 0.25rem 0.85rem; font-size: 0.75rem;
+      font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .section-desc { color: var(--text-secondary); font-size: 0.85rem; font-style: italic; }
+
+    /* ERROR */
+    .error-banner {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: #ff5c2b18; border: 1px solid #ff5c2b44;
+      border-radius: 8px; padding: 1rem 1.25rem;
+      color: #ff5c2b; margin-bottom: 2rem; font-size: 0.9rem;
+    }
+
+    /* GRID */
+    .cards-grid, .loading-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* SKELETON */
+    .skeleton-card {
+      height: 180px; background: var(--court-mid);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+
+    /* GAME CARD */
+    .game-card {
+      background: var(--court-mid);
+      padding: 1.25rem 1.4rem 1.1rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      animation: fadeUp 0.4s ease both;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .game-card::after {
+      content: ''; position: absolute;
+      left: 0; top: 0; bottom: 0; width: 3px;
+    }
+    .game-card.heat-hot::after { background: var(--accent-hot); }
+    .game-card.heat-warm::after { background: var(--accent); }
+    .game-card.heat-cool::after { background: var(--text-dim); }
+    .game-card:hover { background: var(--court-light); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-top { display: flex; justify-content: space-between; align-items: center; }
+
+    .live-dot-wrap { display: flex; align-items: center; gap: 0.35rem; }
+    .live-dot {
+      width: 7px; height: 7px; background: var(--green);
+      border-radius: 50%; animation: blink 1.2s ease-in-out infinite;
+      box-shadow: 0 0 6px var(--green);
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .live-text { font-size: 0.7rem; color: var(--green); font-weight: 500; letter-spacing: 0.1em; }
+    .game-time-str { font-size: 0.72rem; color: var(--text-dim); }
+
+    .gap-badge {
+      font-size: 0.68rem; font-weight: 500; letter-spacing: 0.05em;
+      border-radius: 100px; padding: 0.2rem 0.6rem; text-transform: uppercase;
+    }
+    .gap-hot { background: #ff5c2b18; color: var(--accent-hot); border: 1px solid #ff5c2b44; }
+    .gap-warm { background: var(--accent-dim); color: var(--accent); border: 1px solid #f0c04044; }
+    .gap-cool { background: transparent; color: var(--text-secondary); border: 1px solid var(--line); }
+
+    .teams { display: flex; flex-direction: column; gap: 0.5rem; }
+    .team { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .team-name-row { display: flex; align-items: center; gap: 0.45rem; flex: 1; min-width: 0; }
+
+    .underdog-marker, .fav-marker {
+      font-size: 0.6rem; font-weight: 500; letter-spacing: 0.08em;
+      border-radius: 3px; padding: 0.15rem 0.4rem; white-space: nowrap; flex-shrink: 0;
+    }
+    .underdog-marker { background: #3ddc8418; color: var(--green); border: 1px solid #3ddc8444; }
+    .fav-marker { background: var(--line); color: var(--text-secondary); border: 1px solid var(--line); }
+
+    .rank { font-size: 0.7rem; color: var(--accent); font-weight: 500; flex-shrink: 0; }
+
+    .team-name { font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .underdog-team .team-name { color: var(--text-primary); font-weight: 500; }
+    .favorite-team .team-name { color: var(--text-secondary); }
+
+    .home-tag {
+      font-size: 0.6rem; color: var(--text-dim);
+      border: 1px solid var(--line); border-radius: 3px;
+      padding: 0 0.3rem; flex-shrink: 0;
+    }
+
+    .team-meta { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+
+    .spread-tag {
+      font-size: 0.78rem; font-family: var(--font-display);
+      letter-spacing: 0.03em; border-radius: 4px; padding: 0.15rem 0.45rem;
+    }
+    .underdog-spread { color: var(--green); background: #3ddc8410; }
+    .favorite-spread { color: var(--text-secondary); }
+    .record { font-size: 0.7rem; color: var(--text-dim); }
+    .vs-divider { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; padding-left: 2.2rem; }
+
+    /* CONFIDENCE BAR */
+    .conf-bar-wrap { display: flex; flex-direction: column; gap: 0.35rem; }
+    .conf-bar { height: 4px; background: var(--line); border-radius: 100px; overflow: hidden; }
+    .conf-fill { height: 100%; border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .underdog-fill { background: linear-gradient(90deg, var(--green), #3ddc8488); }
+    .conf-labels { display: flex; justify-content: space-between; align-items: center; }
+    .conf-pct { font-size: 0.72rem; font-weight: 500; }
+    .underdog-pct { color: var(--green); }
+    .favorite-pct { color: var(--text-secondary); }
+    .conf-mid-label { font-size: 0.62rem; color: var(--text-dim); letter-spacing: 0.05em; }
+
+    /* EMPTY */
+    .empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 6rem 2rem; text-align: center; gap: 1rem;
+    }
+    .empty-icon { font-size: 3.5rem; opacity: 0.3; animation: float 3s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .empty-title { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.04em; color: var(--text-secondary); }
+    .empty-desc { max-width: 420px; font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; }
+
+    footer {
+      text-align: center; padding: 1.5rem;
+      color: var(--text-dim); font-size: 0.75rem;
+      border-top: 1px solid var(--line);
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--court); }
+    ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+    @media (max-width: 600px) {
+      .cards-grid, .loading-grid { grid-template-columns: 1fr; }
+      .date-area { display: none; }
+      .logo-text { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="header-inner">
+      <div class="logo-area">
+        <span class="logo-icon">🏀</span>
+        <div>
+          <h1 class="logo-text">UPSET<span class="logo-accent">PICKS</span></h1>
+          <p class="logo-sub">NCAAB</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="date-area">
+          <span class="date-label" id="date-label"></span>
+          <span class="time-label" id="time-label"></span>
+        </div>
+        <div class="count-badge" id="count-badge" style="display:none">
+          <span class="count-num" id="count-num">0</span>
+          <span class="count-label" id="count-label">upsets</span>
+        </div>
+        <button class="refresh-btn" id="refresh-btn" onclick="run()">
+          <span class="refresh-icon">↻</span>
+          <span id="refresh-label">Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <footer>Data via ESPN · Not financial/betting advice</footer>
+</div>
+
+<script>
+  const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard'
+  const SUMMARY    = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary'
+
+  function todayStr() {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    // const day = '21' // HARD CODED DATE FOR TESTING --- IGNORE ---
+    console.log(`Today's date string: ${y}${m}${day}`)
+    return `${y}${m}${day}`
+  }
+
+  async function getGames() {
+    const res = await fetch(`${SCOREBOARD}?dates=${todayStr()}&limit=200&groups=50`)
+    if (!res.ok) throw new Error(`Scoreboard HTTP ${res.status}`)
+    const data = await res.json()
+
+    const games = []
+    for (const event of data.events || []) {
+      const comp = event.competitions?.[0]
+      if (!comp) continue
+      const competitors = comp.competitors || []
+      if (competitors.length < 2) continue
+
+      let home = null, away = null
+      for (const c of competitors) {
+        const rank = c.curatedRank?.current
+        const entry = {
+          name: c.team.displayName,
+          rank: rank && rank <= 25 ? rank : null,
+          record: c.records?.[0]?.summary || '',
+          isHome: c.homeAway === 'home',
+        }
+        if (c.homeAway === 'home') home = entry
+        else away = entry
+      }
+      if (!home || !away) continue
+
+      let homeSpread = null, awaySpread = null
+      const oddsList = [...(comp.odds || [])].sort(
+        (a, b) => (a.provider?.priority ?? 99) - (b.provider?.priority ?? 99)
+      )
+      for (const odds of oddsList) {
+        try {
+          homeSpread = parseFloat(odds.pointSpread.home.close.line)
+          awaySpread = parseFloat(odds.pointSpread.away.close.line)
+          if (!isNaN(homeSpread) && !isNaN(awaySpread)) break
+        } catch {
+          try {
+            const s = parseFloat(odds.spread)
+            if (!isNaN(s)) { homeSpread = s; awaySpread = -s; break }
+          } catch { continue }
+        }
+      }
+
+      const isLive = comp.status?.type?.description?.toLowerCase().includes('progress') ||
+                     comp.status?.type?.description?.toLowerCase().includes('half')
+
+      games.push({
+        game_id: event.id,
+        home, away,
+        homeSpread, awaySpread,
+        game_time: comp.date || '',
+        game_status: comp.status?.type?.description || '',
+        isLive,
+      })
+    }
+    return games
+  }
+
+  async function getPredictor(gameId) {
+    try {
+      const res = await fetch(`${SUMMARY}?event=${gameId}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      const p = data.predictor
+      if (!p) return null
+      const homePct = parseFloat(p.homeTeam?.gameProjection)
+      const awayPct = parseFloat(p.awayTeam?.gameProjection)
+      if (isNaN(homePct) || isNaN(awayPct)) return null
+      return { homePct, awayPct }
+    } catch { return null }
+  }
+
+  async function findUpsetCandidates() {
+    const games = await getGames()
+    const withSpreads = games.filter(g => g.homeSpread !== null)
+
+    // Fetch all predictors in parallel (mirrors ThreadPoolExecutor)
+    const withPredictors = await Promise.all(
+      withSpreads.map(async g => {
+        const pred = await getPredictor(g.game_id)
+        if (!pred) return null
+        return { ...g, homePct: pred.homePct, awayPct: pred.awayPct }
+      })
+    )
+
+    const upsets = []
+    for (const g of withPredictors) {
+      if (!g) continue
+
+      let underdog, favorite
+      if (g.homeSpread > 0) {
+        underdog  = { ...g.home,  spread: `+${g.homeSpread}`, win_pct: g.homePct }
+        favorite  = { ...g.away,  spread: String(g.awaySpread), win_pct: g.awayPct }
+      } else if (g.awaySpread > 0) {
+        underdog  = { ...g.away,  spread: `+${g.awaySpread}`, win_pct: g.awayPct }
+        favorite  = { ...g.home,  spread: String(g.homeSpread), win_pct: g.homePct }
+      } else {
+        continue // pick-em
+      }
+
+      console.log(`${underdog.name} ${underdog.spread} (${underdog.win_pct}%) vs ${favorite.name} ${favorite.spread} (${favorite.win_pct}%)`)
+
+      if (underdog.win_pct > favorite.win_pct) {
+        upsets.push({
+          game_id: g.game_id,
+          underdog, favorite,
+          game_time: g.game_time,
+          game_status: g.game_status,
+          isLive: g.isLive,
+          confidence_gap: Math.round((underdog.win_pct - favorite.win_pct) * 10) / 10,
+        })
+      }
+    }
+
+    return upsets.sort((a, b) => b.confidence_gap - a.confidence_gap)
+  }
+
+  // ── UI helpers ──────────────────────────────────────────────
+
+  function setLoading(on) {
+    const btn = document.getElementById('refresh-btn')
+    const icon = btn.querySelector('.refresh-icon')
+    const label = document.getElementById('refresh-label')
+    btn.disabled = on
+    btn.classList.toggle('loading', on)
+    label.textContent = on ? 'Loading…' : 'Refresh'
+  }
+
+  function renderSkeletons() {
+    const main = document.getElementById('main')
+    const grid = document.createElement('div')
+    grid.className = 'loading-grid'
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('div')
+      s.className = 'skeleton-card'
+      s.style.animationDelay = `${i * 0.08}s`
+      grid.appendChild(s)
+    }
+    main.innerHTML = ''
+    main.appendChild(grid)
+  }
+
+  function renderError(msg) {
+    document.getElementById('main').innerHTML = `
+      <div class="error-banner">
+        <span>⚠</span><span>${msg}</span>
+      </div>`
+  }
+
+  function renderEmpty() {
+    document.getElementById('main').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🏀</div>
+        <h2 class="empty-title">No Upset Candidates</h2>
+        <p class="empty-desc">
+          Either there are no games scheduled, spreads aren't posted yet,
+          or ESPN's model agrees with the oddsmakers on every game.
+          Check back later or try refreshing.
+        </p>
+      </div>`
+  }
+
+  function gameTimeStr(iso) {
+    if (!iso) return ''
+    try {
+      return new Date(iso).toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+      })
+    } catch { return '' }
+  }
+
+  function renderCards(upsets) {
+    const main = document.getElementById('main')
+    main.innerHTML = ''
+
+    const label = document.createElement('div')
+    label.className = 'section-label'
+    label.innerHTML = `
+      <span class="pill">ESPN Predictor vs. Spread</span>
+      <span class="section-desc">Dogs ESPN's model favors to win outright</span>`
+    main.appendChild(label)
+
+    const grid = document.createElement('div')
+    grid.className = 'cards-grid'
+
+    upsets.forEach((g, i) => {
+      const heat = g.confidence_gap >= 15 ? 'hot' : g.confidence_gap >= 8 ? 'warm' : 'cool'
+      const total = g.underdog.win_pct + g.favorite.win_pct
+      const underdogWidth = total > 0 ? (g.underdog.win_pct / total * 100).toFixed(1) : 50
+
+      const timeStr = g.isLive
+        ? `<span class="live-dot-wrap"><span class="live-dot"></span><span class="live-text">LIVE</span></span>`
+        : `<span class="game-time-str">${gameTimeStr(g.game_time) || g.game_status}</span>`
+
+      const rankU = g.underdog.rank ? `<span class="rank">#${g.underdog.rank}</span>` : ''
+      const rankF = g.favorite.rank ? `<span class="rank">#${g.favorite.rank}</span>` : ''
+      const homeU = g.underdog.isHome ? `<span class="home-tag">H</span>` : ''
+      const homeF = g.favorite.isHome ? `<span class="home-tag">H</span>` : ''
+      const recU  = g.underdog.record ? `<span class="record">${g.underdog.record}</span>` : ''
+      const recF  = g.favorite.record ? `<span class="record">${g.favorite.record}</span>` : ''
+
+      const card = document.createElement('div')
+      card.className = `game-card heat-${heat}`
+      card.style.animationDelay = `${i * 0.06}s`
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="matchup-status">${timeStr}</div>
+          <div class="gap-badge gap-${heat}">+${g.confidence_gap.toFixed(1)}% edge</div>
+        </div>
+        <div class="teams">
+          <div class="team underdog-team">
+            <div class="team-name-row">
+              <span class="underdog-marker">DOG</span>
+              ${rankU}
+              <span class="team-name">${g.underdog.name}</span>
+              ${homeU}
+            </div>
+            <div class="team-meta">
+              <span class="spread-tag underdog-spread">${g.underdog.spread}</span>
+              ${recU}
+            </div>
+          </div>
+          <div class="vs-divider">vs</div>
+          <div class="team favorite-team">
+            <div class="team-name-row">
+              <span class="fav-marker">FAV</span>
+              ${rankF}
+              <span class="team-name">${g.favorite.name}</span>
+              ${homeF}
+            </div>
+            <div class="team-meta">
+              <span class="spread-tag favorite-spread">${g.favorite.spread}</span>
+              ${recF}
+            </div>
+          </div>
+        </div>
+        <div class="conf-bar-wrap">
+          <div class="conf-bar">
+            <div class="conf-fill underdog-fill" style="width:${underdogWidth}%"></div>
+          </div>
+          <div class="conf-labels">
+            <span class="conf-pct underdog-pct">${g.underdog.win_pct.toFixed(1)}%</span>
+            <span class="conf-mid-label">ESPN win prob.</span>
+            <span class="conf-pct favorite-pct">${g.favorite.win_pct.toFixed(1)}%</span>
+          </div>
+        </div>`
+      grid.appendChild(card)
+    })
+
+    main.appendChild(grid)
+  }
+
+  // ── Main entry point ────────────────────────────────────────
+
+  async function run() {
+    setLoading(true)
+    renderSkeletons()
+    document.getElementById('count-badge').style.display = 'none'
+
+    try {
+      const upsets = await findUpsetCandidates()
+
+      // Update header
+      const today = new Date()
+      document.getElementById('date-label').textContent = today.toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric'
+      })
+      document.getElementById('time-label').textContent =
+        `Updated ${today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+
+      if (upsets.length > 0) {
+        const badge = document.getElementById('count-badge')
+        badge.style.display = 'flex'
+        document.getElementById('count-num').textContent = upsets.length
+        document.getElementById('count-label').textContent = upsets.length === 1 ? 'upset' : 'upsets'
+        renderCards(upsets)
+      } else {
+        renderEmpty()
+      }
+    } catch (e) {
+      renderError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  run()
+</script>
+</body>
+</html>
