@@ -1,1 +1,1 @@
-brans0nh.github.io/upset-picks/
+[brans0nh.github.io/upset-picks/](brans0nh.github.io/upset-picks/)

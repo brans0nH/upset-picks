@@ -241,6 +241,33 @@
     .empty-title { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.04em; color: var(--text-secondary); }
     .empty-desc { max-width: 420px; font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; }
 
+    /* TRENDS DASHBOARD */
+    .trends-bar {
+      background: var(--court-mid);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .trend-stat { display: flex; flex-direction: column; gap: 0.35rem; }
+    .trend-val { font-family: var(--font-display); font-size: 1.75rem; color: var(--text-primary); line-height: 1; }
+    .trend-val.win { color: var(--green); }
+    .trend-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
+
+    .streak-dots { display: flex; gap: 0.4rem; align-items: center; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--line); border: 1px solid var(--line);
+    }
+    .dot.is-win { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px #3ddc8444; }
+    .dot.is-loss { background: var(--accent-hot); border-color: var(--accent-hot); box-shadow: 0 0 8px #ff5c2b44; }
+    .dot.is-pending { border: 1px dashed var(--text-dim); background: transparent; }
+
     footer {
       text-align: center; padding: 1.5rem;
       color: var(--text-dim); font-size: 0.75rem;
@@ -301,7 +328,7 @@
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
-    // const day = '21' // HARD CODED DATE FOR TESTING --- IGNORE ---
+    // const day = '26' // HARD CODED DATE FOR TESTING --- IGNORE ---
     console.log(`Fetching games for ${y}${m}${day}`)
     return `${y}${m}${day}`
   }
@@ -418,7 +445,7 @@
       }
     }
 
-    return upsets.sort((a, b) => b.confidence_gap - a.confidence_gap)
+    return upsets.sort((a, b) => new Date(a.game_time) - new Date(b.game_time))
   }
 
   // ── UI helpers ──────────────────────────────────────────────
@@ -478,7 +505,6 @@
   function renderCards(upsets) {
     const main = document.getElementById('main')
     main.innerHTML = ''
-
     const label = document.createElement('div')
     label.className = 'section-label'
     label.innerHTML = `
@@ -498,12 +524,33 @@
         ? `<span class="live-dot-wrap"><span class="live-dot"></span><span class="live-text">LIVE</span></span>`
         : `<span class="game-time-str">${gameTimeStr(g.game_time) || g.game_status}</span>`
 
-      const rankU = g.underdog.rank ? `<span class="rank">#${g.underdog.rank}</span>` : ''
-      const rankF = g.favorite.rank ? `<span class="rank">#${g.favorite.rank}</span>` : ''
-      const homeU = g.underdog.isHome ? `<span class="home-tag">H</span>` : ''
-      const homeF = g.favorite.isHome ? `<span class="home-tag">H</span>` : ''
-      const recU  = g.underdog.record ? `<span class="record">${g.underdog.record}</span>` : ''
-      const recF  = g.favorite.record ? `<span class="record">${g.favorite.record}</span>` : ''
+      const renderTeamRow = (team, isDog) => {
+        const rank = team.rank ? `<span class="rank">#${team.rank}</span>` : ''
+        const homeTag = team.isHome ? `<span class="home-tag">H</span>` : ''
+        const record = team.record ? `<span class="record">${team.record}</span>` : ''
+        const markerClass = isDog ? 'underdog-marker' : 'fav-marker'
+        const markerText = isDog ? 'DOG' : 'FAV'
+        const teamClass = isDog ? 'underdog-team' : 'favorite-team'
+        const spreadClass = isDog ? 'underdog-spread' : 'favorite-spread'
+
+        return `
+          <div class="team ${teamClass}">
+            <div class="team-name-row">
+              <span class="${markerClass}">${markerText}</span>
+              ${rank}
+              <span class="team-name">${team.name}</span>
+              ${homeTag}
+            </div>
+            <div class="team-meta">
+              <span class="spread-tag ${spreadClass}">${team.spread}</span>
+              ${record}
+            </div>
+          </div>`
+      }
+
+      const awayTeam = g.underdog.isHome ? g.favorite : g.underdog
+      const homeTeam = g.underdog.isHome ? g.underdog : g.favorite
+      const awayIsDog = !g.underdog.isHome
 
       const card = document.createElement('div')
       card.className = `game-card heat-${heat}`
@@ -514,31 +561,9 @@
           <div class="gap-badge gap-${heat}">+${g.confidence_gap.toFixed(1)}% edge</div>
         </div>
         <div class="teams">
-          <div class="team underdog-team">
-            <div class="team-name-row">
-              <span class="underdog-marker">DOG</span>
-              ${rankU}
-              <span class="team-name">${g.underdog.name}</span>
-              ${homeU}
-            </div>
-            <div class="team-meta">
-              <span class="spread-tag underdog-spread">${g.underdog.spread}</span>
-              ${recU}
-            </div>
-          </div>
+          ${renderTeamRow(awayTeam, awayIsDog)}
           <div class="vs-divider">vs</div>
-          <div class="team favorite-team">
-            <div class="team-name-row">
-              <span class="fav-marker">FAV</span>
-              ${rankF}
-              <span class="team-name">${g.favorite.name}</span>
-              ${homeF}
-            </div>
-            <div class="team-meta">
-              <span class="spread-tag favorite-spread">${g.favorite.spread}</span>
-              ${recF}
-            </div>
-          </div>
+          ${renderTeamRow(homeTeam, !awayIsDog)}
         </div>
         <div class="conf-bar-wrap">
           <div class="conf-bar">
@@ -556,6 +581,184 @@
     main.appendChild(grid)
   }
 
+  // ── Persistence & Trends ───────────────────────────────────
+
+  const HISTORY_KEY = 'UPSET_HISTORY_V1'
+
+  function getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(HISTORY_KEY)) || { games: {} }
+    } catch { return { games: {} } }
+  }
+
+  function saveHistory(history) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  }
+
+  async function checkPastResults(daysBack = 3) {
+    const history = getHistory()
+    const today = new Date()
+    
+    for (let i = 0; i <= daysBack; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+      
+      const res = await fetch(`${SCOREBOARD}?dates=${dateStr}&limit=200&groups=50`)
+      if (!res.ok) continue
+      const data = await res.json()
+      
+      for (const event of data.events || []) {
+        const gameId = event.id
+        const comp = event.competitions?.[0]
+        if (!comp) continue
+        
+        const isFinal = comp.status?.type?.name === 'STATUS_FINAL'
+        const isLive = comp.status?.type?.description?.toLowerCase().includes('progress') ||
+                       comp.status?.type?.description?.toLowerCase().includes('half')
+
+        // If we already have a final result for this game, skip
+        if (history.games[gameId]?.status === 'FINAL') continue
+        // Try to extract spreads robustly (match getGames logic)
+        let homeSpread = null, awaySpread = null
+        const oddsList = [...(comp.odds || [])].sort(
+          (a, b) => (a.provider?.priority ?? 99) - (b.provider?.priority ?? 99)
+        )
+        for (const odds of oddsList) {
+          try {
+            homeSpread = parseFloat(odds.pointSpread.home.close.line)
+            awaySpread = parseFloat(odds.pointSpread.away.close.line)
+            if (!isNaN(homeSpread) && !isNaN(awaySpread)) break
+          } catch {}
+          try {
+            const s = parseFloat(odds.spread)
+            if (!isNaN(s)) { homeSpread = s; awaySpread = -s; break }
+          } catch {}
+        }
+
+        // If we already have a history entry for this game, always try to update final result
+        if (history.games[gameId]) {
+          if (isFinal) {
+            const winnerComp = comp.competitors.find(c => c.winner === true)
+            if (winnerComp) {
+              history.games[gameId].status = 'FINAL'
+              history.games[gameId].winner = winnerComp.team.displayName
+              history.games[gameId].isWin = history.games[gameId].underdog === winnerComp.team.displayName
+            }
+          }
+          // we already tracked this candidate (or it's pending) — move to next event
+          continue
+        }
+
+        // If we don't have a history entry yet, we need a valid spread to determine underdog
+        if (homeSpread === null || awaySpread === null || isNaN(homeSpread) || isNaN(awaySpread)) continue
+
+        // Fetch predictor and only track if predictor favors the underdog
+        const pred = await getPredictor(gameId)
+        if (!pred) continue
+
+        let underdogName, underdogWinPct, favoriteWinPct
+        if (homeSpread > 0) {
+          const c = comp.competitors.find(c => c.homeAway === 'home')
+          if (!c) continue
+          underdogName = c.team.displayName
+          underdogWinPct = pred.homePct; favoriteWinPct = pred.awayPct
+        } else if (awaySpread > 0) {
+          const c = comp.competitors.find(c => c.homeAway === 'away')
+          if (!c) continue
+          underdogName = c.team.displayName
+          underdogWinPct = pred.awayPct; favoriteWinPct = pred.homePct
+        } else continue
+
+        if (underdogWinPct > favoriteWinPct) {
+          history.games[gameId] = {
+            id: gameId,
+            date: dateStr,
+            underdog: underdogName,
+            status: isFinal ? 'FINAL' : 'PENDING',
+            winner: null,
+            isWin: undefined,
+            edge: (underdogWinPct - favoriteWinPct).toFixed(1)
+          }
+        }
+      }
+    }
+    saveHistory(history)
+    return history
+  }
+
+  function renderTrends(history) {
+    const main = document.getElementById('main')
+    
+    // Convert to array and sort by date/id
+    const allGames = Object.values(history.games).sort((a, b) => b.id - a.id)
+    const finalGames = allGames.filter(g => g.status === 'FINAL')
+    const last10 = allGames.slice(0, 10)
+
+    const wins = finalGames.filter(g => g.isWin).length
+    const totalFinals = finalGames.length
+    const totalCandidates = allGames.length
+    const winRate = totalFinals > 0 ? Math.round((wins / totalFinals) * 100) : 0
+
+    const trendsDiv = document.createElement('div')
+    trendsDiv.className = 'trends-bar'
+    trendsDiv.innerHTML = `
+      <div style="display:flex; gap: 2rem; flex-wrap: wrap;">
+        <div class="trend-stat">
+          <span class="trend-val ${winRate >= 50 ? 'win' : ''}">${winRate}%</span>
+          <span class="trend-label">Win Rate (finals)</span>
+        </div>
+        <div class="trend-stat">
+          <span class="trend-val">${totalFinals}</span>
+          <span class="trend-label">Finals Tracked</span>
+        </div>
+        <div class="trend-stat">
+          <span class="trend-val">${totalCandidates}</span>
+          <span class="trend-label">Candidates (total)</span>
+        </div>
+      </div>
+      <div class="trend-stat" style="align-items: flex-end;">
+        <div class="streak-dots" title="Last up to 10 candidates (includes pending)">
+          ${last10.map(g => {
+            const cls = g.status === 'PENDING' ? 'is-pending' : g.isWin ? 'is-win' : 'is-loss'
+            const hint = `${g.underdog} — ${g.status}${g.status==='FINAL' && g.winner ? ` — winner: ${g.winner}` : ''}`
+            return `<div class="dot ${cls}" title="${hint}"></div>`
+          }).join('')}
+        </div>
+        <span class="trend-label">Last 10 Candidates</span>
+      </div>
+    `
+
+    // Build an expandable list showing only FINAL games (most recent first)
+    const listDiv = document.createElement('div')
+    listDiv.className = 'trends-bar'
+
+    const finalsOnly = allGames
+      .filter(g => g.status === 'FINAL')
+      .sort((a, b) => {
+        // sort by date (YYYYMMDD) desc, then by edge desc
+        if (a.date !== b.date) return b.date.localeCompare(a.date)
+        return parseFloat(b.edge || 0) - parseFloat(a.edge || 0)
+      })
+
+    const rows = finalsOnly.map(g => {
+      const winner = g.winner ? `${g.winner}` : ''
+      return `<div style="display:flex; justify-content:space-between; gap:1rem; font-size:0.85rem;">
+                <div style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${g.date} · ${g.underdog}</div>
+                <div style="flex-shrink:0; color:var(--text-dim);">${winner}</div>
+              </div>`
+    }).join('')
+
+    listDiv.innerHTML = `
+      <details>
+        <summary style="cursor:pointer; font-weight:600; margin-bottom:0.5rem;">Tracked games: ${finalsOnly.length}</summary>
+        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.75rem;">${rows || '<div style="color:var(--text-dim)">No final games tracked yet.</div>'}</div>
+      </details>
+    `
+
+    main.prepend(trendsDiv, listDiv)
+  }
+
   // ── Main entry point ────────────────────────────────────────
 
   async function run() {
@@ -564,14 +767,13 @@
     document.getElementById('count-badge').style.display = 'none'
 
     try {
+      // 1. Check trends and history
+      const history = await checkPastResults()
+      
+      // 2. Fetch current candidates
       const upsets = await findUpsetCandidates()
 
-      console.log(`Found ${upsets.length} upset candidates`)
-      for (const u of upsets) {
-        console.log(`- ${u.underdog.name} ${u.underdog.spread} (${u.underdog.win_pct}%)`)
-      }
-
-      // Update header
+      // Update UI
       const today = new Date()
       document.getElementById('date-label').textContent = today.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric'
@@ -579,16 +781,21 @@
       document.getElementById('time-label').textContent =
         `Updated ${today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
 
-      if (upsets.length > 0) {
-        const badge = document.getElementById('count-badge')
-        badge.style.display = 'flex'
-        document.getElementById('count-num').textContent = upsets.length
-        document.getElementById('count-label').textContent = upsets.length === 1 ? 'upset' : 'upsets'
-        renderCards(upsets)
+      if (upsets.length > 0 || Object.keys(history.games).length > 0) {
+        renderCards(upsets) // This clears main
+        renderTrends(history) // This prepends to main
+        
+        if (upsets.length > 0) {
+          const badge = document.getElementById('count-badge')
+          badge.style.display = 'flex'
+          document.getElementById('count-num').textContent = upsets.length
+          document.getElementById('count-label').textContent = upsets.length === 1 ? 'upset' : 'upsets'
+        }
       } else {
         renderEmpty()
       }
     } catch (e) {
+      console.error(e)
       renderError(e.message)
     } finally {
       setLoading(false)
